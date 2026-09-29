@@ -1,0 +1,3 @@
+import mongoose from 'mongoose';
+const member=new mongoose.Schema({userId:{type:mongoose.Schema.Types.ObjectId,ref:'User'},name:{type:String,required:true},registerNo:String,className:String,year:String,email:String},{_id:false});
+const s=new mongoose.Schema({eventId:{type:mongoose.Schema.Types.ObjectId,ref:'Event',required:true},registrationType:{type:String,enum:['individual','team'],required:true},studentId:{type:mongoose.Schema.Types.ObjectId,ref:'User'},participant:member,teamName:String,members:[member]},{timestamps:true});s.index({eventId:1,studentId:1});export default mongoose.model('Registration',s);

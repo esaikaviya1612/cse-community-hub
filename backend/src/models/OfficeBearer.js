@@ -1,0 +1,2 @@
+import mongoose from 'mongoose';
+export default mongoose.model('OfficeBearer',new mongoose.Schema({communityId:{type:mongoose.Schema.Types.ObjectId,ref:'Community',required:true},roleId:{type:mongoose.Schema.Types.ObjectId,ref:'Role'},roleName:{type:String,required:true},name:{type:String,required:true},year:String,className:String,photoUrl:String,bio:String,displayOrder:{type:Number,default:0}},{timestamps:true}));
