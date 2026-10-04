@@ -94,7 +94,51 @@ r.get(
     }
   }
 );
+// STAFF / COORDINATOR: VIEW EVENT REGISTRATIONS
+r.get(
+  '/events/:id/registrations',
+  auth,
+  allow('coordinator', 'staff'),
+  async (req, res) => {
+    try {
+      const event = await Event.findById(req.params.id);
 
+      if (!event) {
+        return res.status(404).json({
+          message: 'Event not found'
+        });
+      }
+
+      if (
+        req.user.role === 'coordinator' &&
+        event.createdBy.toString() !== req.user._id.toString()
+      ) {
+        return res.status(403).json({
+          message: 'You are not allowed to view these registrations'
+        });
+      }
+
+      const registrations =
+        await Registration.find({
+          eventId: event._id
+        })
+          .populate(
+            'studentId',
+            'name email registerNo department year gender'
+          )
+          .sort({
+            createdAt: 1
+          });
+
+      res.json(registrations);
+
+    } catch (e) {
+      res.status(500).json({
+        message: e.message
+      });
+    }
+  }
+);
 
 // EXPORT ROUTER
 export default r;

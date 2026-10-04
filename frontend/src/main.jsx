@@ -105,18 +105,29 @@ function App() {
               Registrations
             </button>
 
-            <button onClick={() => setPage('communityManage')}>
-              Community Management
+
+
+            <button
+              className={page === 'assignedEnquiries' ? 'active' : ''}
+              onClick={() => setPage('assignedEnquiries')}
+            >
+              Assigned Enquiries
             </button>
-
-
           </>
         )}
-        {user.role === 'student' && (
-          <button onClick={() => setPage('elections')}>
-            Elections
-          </button>
-        )}
+        {(user.role === 'student' ||
+          user.role === 'coordinator') && (
+            <button
+              className={
+                page === 'elections'
+                  ? 'active'
+                  : ''
+              }
+              onClick={() => setPage('elections')}
+            >
+              Elections
+            </button>
+          )}
         {/* MY PROFILE - ALL USERS */}
         <button
           className={page === 'profile' ? 'active' : ''}
@@ -144,6 +155,8 @@ function App() {
             )}
         </button>
 
+
+
         {/* STUDENT */}
         {user.role === 'student' && (
           <button
@@ -151,6 +164,19 @@ function App() {
             onClick={() => setPage('my')}
           >
             My Registrations
+          </button>
+
+        )}
+        {user.role === 'student' && (
+          <button
+            className={
+              page === 'enquiries'
+                ? 'active'
+                : ''
+            }
+            onClick={() => setPage('enquiries')}
+          >
+            Feedback / Enquiry
           </button>
         )}
 
@@ -163,6 +189,7 @@ function App() {
         )}
 
         {/* STAFF */}
+
         {user.role === 'staff' && (
           <>
             <button
@@ -178,9 +205,39 @@ function App() {
             >
               Management
             </button>
+
+            <button
+              className={
+                page === 'electionManage'
+                  ? 'active'
+                  : ''
+              }
+              onClick={() =>
+                setPage('electionManage')
+              }
+            >
+              Election Management
+            </button>
+            <button
+              className={
+                page === 'electionList'
+                  ? 'active'
+                  : ''
+              }
+              onClick={() =>
+                setPage('electionList')
+              }
+            >
+              Elections
+            </button>
+            <button
+              className={page === 'staffEnquiries' ? 'active' : ''}
+              onClick={() => setPage('staffEnquiries')}
+            >
+              Feedback / Enquiries
+            </button>
           </>
         )}
-
         <button
           onClick={() => {
             localStorage.clear();
@@ -260,6 +317,21 @@ function App() {
             reload={load}
           />
         )}
+        {page === 'enquiries' &&
+          user.role === 'student' && (
+            <EnquiryPage
+              setMsg={setMsg}
+            />
+          )}
+        {page === 'staffEnquiries' &&
+          user.role === 'staff' && (
+            <StaffEnquiryPage setMsg={setMsg} />
+          )}
+
+        {page === 'assignedEnquiries' &&
+          user.role === 'coordinator' && (
+            <CoordinatorEnquiryPage setMsg={setMsg} />
+          )}
 
         {page === 'create' && (
           <Create
@@ -270,7 +342,7 @@ function App() {
             reload={load}
           />
         )}
-        
+
         {page === 'pending' && (
           <Pending
             setMsg={setMsg}
@@ -320,6 +392,30 @@ function App() {
             setMsg={setMsg}
           />
         )}
+        {page === 'electionList' &&
+          user.role === 'staff' && (
+            <StaffElectionList
+              elections={elections}
+              setMsg={setMsg}
+              reloadElections={() => {
+                get('/elections')
+                  .then(setElections)
+                  .catch(() => { });
+              }}
+            />
+          )}
+        {page === 'electionManage' &&
+          user.role === 'staff' && (
+            <ElectionManagement
+              cs={communities}
+              setMsg={setMsg}
+              reloadElections={() => {
+                get('/elections')
+                  .then(setElections)
+                  .catch(() => { });
+              }}
+            />
+          )}
         {page === 'my' && <My />}
 
         {/* PROFILE PAGE */}
@@ -348,9 +444,43 @@ function App() {
 ========================================================= */
 
 function Login({ onLogin }) {
-  const [e, setE] = useState('student@csehub.local');
-  const [p, setP] = useState('Student@123');
+  const [e, setE] = useState('');
+  const [p, setP] = useState('');
   const [err, setErr] = useState('');
+  const [showRegister, setShowRegister] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  if (showRegister) {
+    return (
+      <RegisterAccount
+        onBack={() => setShowRegister(false)}
+        onRegistered={(email) => {
+          setE(email);
+          setP('');
+          setShowRegister(false);
+        }}
+      />
+    );
+  }
+
+  const handleLogin = async () => {
+    if (!e.trim() || !p.trim()) {
+      setErr('Please enter email and password.');
+      return;
+    }
+
+    try {
+      setErr('');
+      setLoading(true);
+
+      await onLogin(e, p);
+
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="login">
@@ -361,6 +491,7 @@ function Login({ onLogin }) {
         <h1>CSE Community Hub</h1>
 
         <input
+          type="email"
           value={e}
           onChange={(x) => setE(x.target.value)}
           placeholder="Email"
@@ -381,18 +512,317 @@ function Login({ onLogin }) {
 
         <button
           className="primary"
-          onClick={() =>
-            onLogin(e, p).catch((x) => setErr(x.message))
-          }
+          onClick={handleLogin}
+          disabled={loading}
         >
-          Login
+          {loading ? 'Logging in...' : 'Login'}
         </button>
 
-        <small>
-          Student demo: student@csehub.local / Student@123
-        </small>
+        <p>
+          Don't have an account?
+        </p>
+
+        <button
+          onClick={() => {
+            setErr('');
+            setShowRegister(true);
+          }}
+        >
+          Create Account
+        </button>
 
       </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   REGISTER PAGE
+========================================================= */
+
+
+
+function RegisterAccount({
+  onBack,
+  onRegistered
+}) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    registerNo: '',
+    department: '',
+    year: '',
+    gender: ''
+  });
+
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const updateField = (field, value) => {
+    setForm((old) => ({
+      ...old,
+      [field]: value
+    }));
+  };
+
+  const register = async () => {
+
+    if (
+      !form.name.trim() ||
+      !form.email.trim() ||
+      !form.password.trim() ||
+      !form.registerNo.trim() ||
+      !form.department ||
+      !form.year ||
+      !form.gender
+    ) {
+      setError('Please fill all fields.');
+      return;
+    }
+
+    if (form.password.length < 6) {
+      setError(
+        'Password must be at least 6 characters.'
+      );
+      return;
+    }
+
+    try {
+      setError('');
+      setLoading(true);
+
+      await send('/auth/register', {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        registerNo: form.registerNo.trim(),
+        department: form.department,
+        year: form.year,
+        gender: form.gender
+      });
+
+      alert(
+        'Account created successfully. Please login.'
+      );
+
+      onRegistered(form.email.trim());
+
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login">
+
+      <div className="loginbox">
+
+        <b className="logo">
+          CSE
+        </b>
+
+        <h1>
+          Create Account
+        </h1>
+
+        <p>
+          Register as a Student
+        </p>
+
+        {/* NAME */}
+
+        <input
+          type="text"
+          placeholder="Full Name"
+          value={form.name}
+          onChange={(e) =>
+            updateField(
+              'name',
+              e.target.value
+            )
+          }
+        />
+
+        {/* EMAIL */}
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={(e) =>
+            updateField(
+              'email',
+              e.target.value
+            )
+          }
+        />
+
+        {/* PASSWORD */}
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={form.password}
+          onChange={(e) =>
+            updateField(
+              'password',
+              e.target.value
+            )
+          }
+        />
+
+        {/* REGISTER NUMBER */}
+
+        <input
+          type="text"
+          placeholder="Register Number"
+          value={form.registerNo}
+          onChange={(e) =>
+            updateField(
+              'registerNo',
+              e.target.value
+            )
+          }
+        />
+
+        {/* DEPARTMENT */}
+
+        <select
+          value={form.department}
+          onChange={(e) =>
+            updateField(
+              'department',
+              e.target.value
+            )
+          }
+        >
+          <option value="">
+            Select Department
+          </option>
+
+          <option value="CSE">
+            CSE
+          </option>
+
+          <option value="ECE">
+            ECE
+          </option>
+
+          <option value="EEE">
+            EEE
+          </option>
+
+          <option value="MECH">
+            MECH
+          </option>
+
+          <option value="CIVIL">
+            CIVIL
+          </option>
+
+          <option value="IT">
+            IT
+          </option>
+
+          <option value="Other">
+            Other
+          </option>
+        </select>
+
+        {/* YEAR */}
+
+        <select
+          value={form.year}
+          onChange={(e) =>
+            updateField(
+              'year',
+              e.target.value
+            )
+          }
+        >
+          <option value="">
+            Select Year
+          </option>
+
+          <option value="I Year">
+            I Year
+          </option>
+
+          <option value="II Year">
+            II Year
+          </option>
+
+          <option value="III Year">
+            III Year
+          </option>
+
+          <option value="IV Year">
+            IV Year
+          </option>
+        </select>
+
+        {/* GENDER */}
+
+        <select
+          value={form.gender}
+          onChange={(e) =>
+            updateField(
+              'gender',
+              e.target.value
+            )
+          }
+        >
+          <option value="">
+            Select Gender
+          </option>
+
+          <option value="Female">
+            Female
+          </option>
+
+          <option value="Male">
+            Male
+          </option>
+
+          <option value="Other">
+            Other
+          </option>
+        </select>
+
+        {error && (
+          <p className="err">
+            {error}
+          </p>
+        )}
+
+        {/* REGISTER */}
+
+        <button
+          className="primary"
+          onClick={register}
+          disabled={loading}
+        >
+          {loading
+            ? 'Creating Account...'
+            : 'Create Account'}
+        </button>
+
+        {/* BACK */}
+
+        <button
+          onClick={() => {
+            setError('');
+            onBack();
+          }}
+        >
+          Back to Login
+        </button>
+
+      </div>
+
     </div>
   );
 }
@@ -402,41 +832,203 @@ function Login({ onLogin }) {
    DASHBOARD
 ========================================================= */
 
-function Dashboard({ cs, es, open }) {
+function Dashboard({
+  cs,
+  es,
+  open
+}) {
+
+  const approvedEvents =
+    (es || [])
+      .filter(
+        e => e.status === 'approved'
+      );
+
+
   return (
     <>
+
       <div className="hero">
-        <h2>Welcome to the CSE Community Hub</h2>
+
+        <h2>
+          Welcome to the CSE Community Hub
+        </h2>
 
         <p>
-          Tech Society and IEI activities, events and registrations.
+          Tech Society and IEI activities,
+          events and registrations.
         </p>
+
       </div>
 
-      <h2>Communities</h2>
+
+      {/* =================================================
+          COMMUNITIES
+      ================================================= */}
+
+      <h2>
+        Communities
+      </h2>
 
       <div className="grid">
-        {cs.map((c) => (
+
+        {cs.map(c => (
+
           <Card
             key={c._id}
             title={c.name}
             text={c.description}
-            action={() => open('community', c._id)}
+            action={() =>
+              open(
+                'community',
+                c._id
+              )
+            }
           />
+
         ))}
+
       </div>
 
-      <h2>Upcoming Events</h2>
+
+      {/* =================================================
+          EVENT POSTERS
+      ================================================= */}
+
+      <h2>
+        🖼️ Featured Events
+      </h2>
+
+
+      {approvedEvents.length === 0 ? (
+
+        <div className="card">
+
+          <p>
+            No event posters available.
+          </p>
+
+        </div>
+
+      ) : (
+
+        <div className="poster-grid">
+
+          {approvedEvents
+            .slice(0, 6)
+            .map(event => (
+
+              <div
+                className="event-poster-card"
+                key={event._id}
+                onClick={() =>
+                  open(
+                    'event',
+                    event._id
+                  )
+                }
+              >
+
+                {event.posterUrl ? (
+
+                  <img
+                    src={
+                      event.posterUrl.startsWith('http')
+                        ? event.posterUrl
+                        : `http://localhost:5000${event.posterUrl}`
+                    }
+                    alt={
+                      event.name
+                    }
+                    className="event-poster-image"
+                  />
+
+                ) : (
+
+                  <div className="poster-placeholder">
+
+                    <span>
+                      🖼️
+                    </span>
+
+                    <p>
+                      No poster
+                    </p>
+
+                  </div>
+
+                )}
+
+
+                <div className="event-poster-info">
+
+                  <h3>
+                    {event.name}
+                  </h3>
+
+                  <p>
+                    📅 {event.date}
+                  </p>
+
+                  <p>
+                    📍 {event.venue}
+                  </p>
+
+                  <button
+                    onClick={(e) => {
+
+                      e.stopPropagation();
+
+                      open(
+                        'event',
+                        event._id
+                      );
+
+                    }}
+                  >
+                    View Event
+                  </button>
+
+                </div>
+
+              </div>
+
+            ))}
+
+        </div>
+
+      )}
+
+
+      {/* =================================================
+          UPCOMING EVENTS
+      ================================================= */}
+
+      <h2>
+        📅 Upcoming Events
+      </h2>
 
       <div className="grid">
-        {es.slice(0, 6).map((e) => (
-          <EventCard
-            key={e._id}
-            e={e}
-            action={() => open('event', e._id)}
-          />
-        ))}
+
+        {approvedEvents
+          .slice(0, 6)
+          .map(e => (
+
+            <EventCard
+              key={e._id}
+              e={e}
+              action={() =>
+                open(
+                  'event',
+                  e._id
+                )
+              }
+            />
+
+          ))}
+
       </div>
+
     </>
   );
 }
@@ -528,6 +1120,247 @@ function EventCard({ e, action }) {
       <button onClick={action}>
         View Details
       </button>
+
+    </div>
+  );
+}
+/* =========================================================
+   STAFF ELECTION LIST
+========================================================= */
+
+function StaffElectionList({
+  elections,
+  setMsg,
+  reloadElections
+}) {
+  const [results, setResults] = useState(null);
+  const [loadingResults, setLoadingResults] =
+    useState(false);
+
+  const closeElection = async (id) => {
+
+    const confirmClose = window.confirm(
+      'Are you sure you want to close this election? Voting will stop.'
+    );
+
+    if (!confirmClose) return;
+
+    try {
+
+      await send(
+        `/elections/${id}/close`,
+        {},
+        'PATCH'
+      );
+
+      setMsg('Election closed successfully.');
+
+      reloadElections();
+
+    } catch (e) {
+      setMsg(e.message);
+    }
+  };
+
+
+  const viewResults = async (id) => {
+
+    setLoadingResults(true);
+
+    try {
+
+      const data =
+        await get(`/elections/${id}/results`);
+
+      setResults(data);
+
+    } catch (e) {
+
+      setMsg(e.message);
+
+    } finally {
+
+      setLoadingResults(false);
+    }
+  };
+
+
+  if (results) {
+
+    return (
+      <div className="page">
+
+        <button
+          onClick={() => setResults(null)}
+        >
+          ← Back to Elections
+        </button>
+
+        <h2>
+          📊 Election Results
+        </h2>
+
+        <h3>
+          {results.election}
+        </h3>
+
+        {results.results.map(
+          (position) => (
+
+            <div
+              className="card"
+              key={position.position}
+            >
+
+              <h3>
+                {position.position}
+              </h3>
+
+              {position.candidates
+                .sort(
+                  (a, b) =>
+                    b.votes - a.votes
+                )
+                .map(
+                  (candidate) => (
+
+                    <div
+                      key={
+                        candidate.candidateId
+                      }
+                      style={{
+                        padding: '10px',
+                        borderBottom:
+                          '1px solid #ddd'
+                      }}
+                    >
+
+                      <strong>
+                        {candidate.name}
+                      </strong>
+
+                      <span>
+                        {' '}
+                        —{' '}
+                        {candidate.registerNo}
+                      </span>
+
+                      <span
+                        style={{
+                          float: 'right'
+                        }}
+                      >
+                        🗳️{' '}
+                        {candidate.votes}{' '}
+                        votes
+                      </span>
+
+                    </div>
+
+                  )
+                )}
+
+            </div>
+
+          )
+        )}
+
+      </div>
+    );
+  }
+
+
+  return (
+    <div className="page">
+
+      <h2>
+        📋 Existing Elections
+      </h2>
+
+      {elections.length === 0 ? (
+
+        <div className="card">
+
+          <p>
+            No elections created yet.
+          </p>
+
+        </div>
+
+      ) : (
+
+        elections.map(
+          (election) => (
+
+            <div
+              className="card"
+              key={election._id}
+              style={{
+                marginBottom: '15px'
+              }}
+            >
+
+              <h3>
+                {election.title}
+              </h3>
+
+              <p>
+                Community:{' '}
+                {election.communityId?.name}
+              </p>
+
+              <p>
+                Status:{' '}
+
+                <strong>
+                  {election.status
+                    .toUpperCase()}
+                </strong>
+              </p>
+
+              <p>
+                Positions:{' '}
+                {election.positions?.length || 0}
+              </p>
+
+              <div>
+
+                <button
+                  onClick={() =>
+                    viewResults(
+                      election._id
+                    )
+                  }
+                >
+                  📊 View Results
+                </button>
+
+                {election.status ===
+                  'active' && (
+
+                    <button
+                      onClick={() =>
+                        closeElection(
+                          election._id
+                        )
+                      }
+                      style={{
+                        marginLeft: '10px'
+                      }}
+                    >
+                      🔒 Close Election
+                    </button>
+
+                  )}
+
+              </div>
+
+            </div>
+
+          )
+        )
+
+      )}
 
     </div>
   );
@@ -752,6 +1585,18 @@ function Registrations({ events, setMsg }) {
                 <b>Total Registrations:</b>{' '}
                 {registrations.length}
               </p>
+              <button
+                className="primary"
+                onClick={async () => {
+                  try {
+                    await excel(selectedEvent);
+                  } catch (e) {
+                    setMsg(e.message);
+                  }
+                }}
+              >
+                Download Excel
+              </button>
             </div>
           )}
 
@@ -1477,7 +2322,7 @@ function Create({
     maxParticipants: 1,
     registrationDeadline: ''
   });
-
+ const [poster, setPoster] = useState(null);
   const u = (k, v) =>
     setF({
       ...f,
@@ -1559,6 +2404,63 @@ function Create({
             }
           />
         </label>
+        <label>
+          Event Poster
+
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(e) => {
+
+              const file =
+                e.target.files?.[0];
+
+              if (!file) return;
+
+
+              if (
+                ![
+                  'image/jpeg',
+                  'image/png',
+                  'image/webp'
+                ].includes(file.type)
+              ) {
+
+                setMsg(
+                  'Only JPG, PNG and WEBP images are allowed.'
+                );
+
+                e.target.value = '';
+
+                return;
+              }
+
+
+              if (
+                file.size >
+                5 * 1024 * 1024
+              ) {
+
+                setMsg(
+                  'Poster must be less than 5 MB.'
+                );
+
+                e.target.value = '';
+
+                return;
+              }
+
+
+              setPoster(file);
+
+            }}
+          />
+
+          <small>
+            JPG, PNG or WEBP • Maximum 5 MB
+          </small>
+
+        </label>
 
         <label>
           Registration Type
@@ -1634,26 +2536,84 @@ function Create({
         )}
 
         <button
-          className="primary"
-          onClick={async () => {
-            try {
+  className="primary"
+  onClick={async () => {
 
-              await send('/events', f);
+    try {
 
-              setMsg(
-                'Event submitted for Staff approval.'
-              );
+      if (!f.name.trim()) {
 
-              await reload();
-              back();
+        setMsg(
+          'Please enter event name.'
+        );
 
-            } catch (x) {
-              setMsg(x.message);
-            }
-          }}
-        >
-          Submit for Approval
-        </button>
+        return;
+      }
+
+
+      if (!f.communityId) {
+
+        setMsg(
+          'Please select community.'
+        );
+
+        return;
+      }
+
+
+      const formData =
+        new FormData();
+
+
+      Object.entries(f).forEach(
+        ([key, value]) => {
+
+          formData.append(
+            key,
+            value
+          );
+
+        }
+      );
+
+
+      if (poster) {
+
+        formData.append(
+          'poster',
+          poster
+        );
+
+      }
+
+
+      await send(
+        '/events',
+        formData
+      );
+
+
+      setMsg(
+        'Event submitted for Staff approval.'
+      );
+
+
+      await reload();
+
+      back();
+
+    } catch (x) {
+
+      setMsg(
+        x.message
+      );
+
+    }
+
+  }}
+>
+  Submit for Approval
+</button>
 
       </div>
     </>
@@ -3432,6 +4392,1579 @@ function Notifications({
   );
 }
 
+/* =========================================================
+   STAFF ELECTION MANAGEMENT
+========================================================= */
+
+/* =========================================================
+   STAFF ELECTION MANAGEMENT
+========================================================= */
+
+function ElectionManagement({
+  cs,
+  setMsg,
+  reloadElections
+}) {
+
+  const [title, setTitle] = useState('');
+
+  const [communityId, setCommunityId] = useState(
+    cs[0]?._id || ''
+  );
+
+  const [roles, setRoles] = useState([]);
+
+  const [users, setUsers] = useState([]);
+
+  const [positions, setPositions] = useState([
+    {
+      roleId: '',
+      name: '',
+      candidates: [
+        {
+          userId: '',
+          name: '',
+          email: '',
+          registerNo: '',
+          photo: ''
+        }
+      ]
+    }
+  ]);
+
+  const [loading, setLoading] = useState(false);
+
+
+  /* =====================================================
+     LOAD ROLES
+  ===================================================== */
+
+  const loadElectionData = async (selectedCommunityId) => {
+
+    if (!selectedCommunityId) {
+      setRoles([]);
+      return;
+    }
+
+    try {
+
+      const communityData = await get(
+        `/communities/${selectedCommunityId}`
+      );
+
+      setRoles(
+        communityData.roles || []
+      );
+
+    } catch (error) {
+
+      setMsg(error.message);
+
+    }
+  };
+
+
+  /* =====================================================
+     LOAD USERS FOR CANDIDATES
+  ===================================================== */
+
+  const loadUsers = async () => {
+
+    try {
+
+      const data = await get(
+        '/communities/users/coordinators'
+      );
+
+      setUsers(data || []);
+
+    } catch (error) {
+
+      setMsg(error.message);
+
+    }
+  };
+
+
+  /* =====================================================
+     INITIAL LOAD
+  ===================================================== */
+
+  useEffect(() => {
+
+    if (!communityId) return;
+
+    loadElectionData(communityId);
+
+    loadUsers();
+
+  }, [communityId]);
+
+
+  /* =====================================================
+     ADD POSITION
+  ===================================================== */
+
+  const addPosition = () => {
+
+    setPositions([
+      ...positions,
+
+      {
+        roleId: '',
+        name: '',
+        candidates: [
+          {
+            userId: '',
+            name: '',
+            email: '',
+            registerNo: '',
+            photo: ''
+          }
+        ]
+      }
+    ]);
+
+  };
+
+
+  /* =====================================================
+     REMOVE POSITION
+  ===================================================== */
+
+  const removePosition = (positionIndex) => {
+
+    if (positions.length === 1) {
+
+      setMsg(
+        'At least one position is required.'
+      );
+
+      return;
+    }
+
+    setPositions(
+      positions.filter(
+        (_, index) =>
+          index !== positionIndex
+      )
+    );
+
+  };
+
+
+  /* =====================================================
+     SELECT ROLE
+  ===================================================== */
+
+  const selectRole = (
+    positionIndex,
+    roleId
+  ) => {
+
+    const selectedRole = roles.find(
+      role => role._id === roleId
+    );
+
+    setPositions(
+      positions.map(
+        (position, index) => {
+
+          if (index !== positionIndex) {
+            return position;
+          }
+
+          return {
+            ...position,
+            roleId,
+            name: selectedRole
+              ? selectedRole.name
+              : ''
+          };
+
+        }
+      )
+    );
+
+  };
+
+
+  /* =====================================================
+     ADD CANDIDATE
+  ===================================================== */
+
+  const addCandidate = (
+    positionIndex
+  ) => {
+
+    setPositions(
+      positions.map(
+        (position, index) => {
+
+          if (index !== positionIndex) {
+            return position;
+          }
+
+          return {
+            ...position,
+
+            candidates: [
+              ...position.candidates,
+
+              {
+                userId: '',
+                name: '',
+                email: '',
+                registerNo: '',
+                photo: ''
+              }
+            ]
+          };
+
+        }
+      )
+    );
+
+  };
+
+
+  /* =====================================================
+     REMOVE CANDIDATE
+  ===================================================== */
+
+  const removeCandidate = (
+    positionIndex,
+    candidateIndex
+  ) => {
+
+    const position =
+      positions[positionIndex];
+
+    if (
+      position.candidates.length === 1
+    ) {
+
+      setMsg(
+        'At least one candidate is required.'
+      );
+
+      return;
+    }
+
+    setPositions(
+      positions.map(
+        (position, index) => {
+
+          if (index !== positionIndex) {
+            return position;
+          }
+
+          return {
+            ...position,
+
+            candidates:
+              position.candidates.filter(
+                (_, cIndex) =>
+                  cIndex !== candidateIndex
+              )
+          };
+
+        }
+      )
+    );
+
+  };
+
+
+  /* =====================================================
+     SELECT CANDIDATE
+  ===================================================== */
+
+  const selectCandidate = (
+    positionIndex,
+    candidateIndex,
+    userId
+  ) => {
+
+    const selectedUser =
+      users.find(
+        user =>
+          user._id === userId
+      );
+
+    if (!selectedUser) {
+      return;
+    }
+
+    setPositions(
+      positions.map(
+        (position, pIndex) => {
+
+          if (
+            pIndex !== positionIndex
+          ) {
+            return position;
+          }
+
+          return {
+            ...position,
+
+            candidates:
+              position.candidates.map(
+                (candidate, cIndex) => {
+
+                  if (
+                    cIndex !== candidateIndex
+                  ) {
+                    return candidate;
+                  }
+
+                  return {
+                    userId:
+                      selectedUser._id,
+
+                    name:
+                      selectedUser.name,
+
+                    email:
+                      selectedUser.email,
+
+                    registerNo:
+                      selectedUser.registerNo || '',
+
+                    photo:
+                      selectedUser.photoUrl || ''
+                  };
+
+                }
+              )
+          };
+
+        }
+      )
+    );
+
+  };
+
+
+  /* =====================================================
+     CREATE ELECTION
+  ===================================================== */
+
+  const createElection = async () => {
+
+    if (!title.trim()) {
+
+      setMsg(
+        'Please enter election title.'
+      );
+
+      return;
+    }
+
+    if (!communityId) {
+
+      setMsg(
+        'Please select a community.'
+      );
+
+      return;
+    }
+
+    if (positions.length === 0) {
+
+      setMsg(
+        'Please add at least one position.'
+      );
+
+      return;
+    }
+
+
+    /* VALIDATION */
+
+    for (const position of positions) {
+
+      if (!position.roleId) {
+
+        setMsg(
+          'Please select a role for every position.'
+        );
+
+        return;
+      }
+
+      if (
+        position.candidates.length === 0
+      ) {
+
+        setMsg(
+          `Add at least one candidate for ${position.name}.`
+        );
+
+        return;
+      }
+
+
+      for (
+        const candidate
+        of position.candidates
+      ) {
+
+        if (!candidate.userId) {
+
+          setMsg(
+            `Please select a candidate for ${position.name}.`
+          );
+
+          return;
+        }
+
+      }
+
+    }
+
+
+    setLoading(true);
+
+    try {
+
+      const result = await send(
+        '/elections',
+        {
+          title: title.trim(),
+
+          communityId,
+
+          positions,
+
+          status: 'active'
+        }
+      );
+
+      console.log(
+        'Election created:',
+        result
+      );
+
+      setMsg(
+        'Election created successfully.'
+      );
+
+
+      /* RESET */
+
+      setTitle('');
+
+      setCommunityId(
+        cs[0]?._id || ''
+      );
+
+      setPositions([
+        {
+          roleId: '',
+          name: '',
+          candidates: [
+            {
+              userId: '',
+              name: '',
+              email: '',
+              registerNo: '',
+              photo: ''
+            }
+          ]
+        }
+      ]);
+
+
+      if (reloadElections) {
+        reloadElections();
+      }
+
+    } catch (error) {
+
+      console.error(
+        'CREATE ELECTION ERROR:',
+        error
+      );
+
+      setMsg(
+        error.message
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+
+  /* =====================================================
+     UI
+  ===================================================== */
+
+  return (
+
+    <div className="page">
+
+      <h2>
+        🗳️ Election Management
+      </h2>
+
+      <p>
+        Create an election and select
+        roles and candidates.
+      </p>
+
+
+      {/* =================================================
+          ELECTION DETAILS
+      ================================================= */}
+
+      <div className="card">
+
+        <h3>
+          Election Details
+        </h3>
+
+
+        <label>
+
+          Election Title
+
+          <input
+            type="text"
+            placeholder="Example: IEI Election 2026"
+            value={title}
+            onChange={(e) =>
+              setTitle(e.target.value)
+            }
+          />
+
+        </label>
+
+
+        <label>
+
+          Community
+
+          <select
+            value={communityId}
+            onChange={(e) => {
+
+              const value =
+                e.target.value;
+
+              setCommunityId(value);
+
+              setPositions([
+                {
+                  roleId: '',
+                  name: '',
+                  candidates: [
+                    {
+                      userId: '',
+                      name: '',
+                      email: '',
+                      registerNo: '',
+                      photo: ''
+                    }
+                  ]
+                }
+              ]);
+
+            }}
+          >
+
+            <option value="">
+              Select Community
+            </option>
+
+            {cs.map(
+              community => (
+
+                <option
+                  key={community._id}
+                  value={community._id}
+                >
+                  {community.name}
+                </option>
+
+              )
+            )}
+
+          </select>
+
+        </label>
+
+      </div>
+
+
+      {/* =================================================
+          POSITIONS
+      ================================================= */}
+
+      <h3>
+        Election Positions
+      </h3>
+
+
+      {positions.map(
+        (position, positionIndex) => (
+
+          <div
+            className="card"
+            key={positionIndex}
+            style={{
+              marginBottom: '20px'
+            }}
+          >
+
+
+            {/* POSITION HEADER */}
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent:
+                  'space-between',
+                alignItems: 'center'
+              }}
+            >
+
+              <h3>
+                Position {positionIndex + 1}
+              </h3>
+
+
+              <button
+                onClick={() =>
+                  removePosition(
+                    positionIndex
+                  )
+                }
+              >
+                Remove Position
+              </button>
+
+            </div>
+
+
+            {/* ROLE DROPDOWN */}
+
+            <label>
+
+              Select Role
+
+              <select
+                value={
+                  position.roleId
+                }
+                onChange={(e) =>
+                  selectRole(
+                    positionIndex,
+                    e.target.value
+                  )
+                }
+              >
+
+                <option value="">
+                  Select Office Bearer Role
+                </option>
+
+                {roles.map(
+                  role => (
+
+                    <option
+                      key={role._id}
+                      value={role._id}
+                    >
+                      {role.name}
+                    </option>
+
+                  )
+                )}
+
+              </select>
+
+            </label>
+
+
+            {/* SELECTED ROLE */}
+
+            {position.name && (
+
+              <p
+                style={{
+                  marginTop: '8px',
+                  fontWeight: '600'
+                }}
+              >
+                Selected Position:
+                {' '}
+                {position.name}
+              </p>
+
+            )}
+
+
+            {/* CANDIDATES */}
+
+            <h4>
+              Candidates
+            </h4>
+
+
+            {position.candidates.map(
+              (
+                candidate,
+                candidateIndex
+              ) => (
+
+                <div
+                  key={candidateIndex}
+                  style={{
+                    border:
+                      '1px solid #ddd',
+                    padding: '15px',
+                    marginBottom:
+                      '10px',
+                    borderRadius:
+                      '8px'
+                  }}
+                >
+
+                  <strong>
+                    Candidate {candidateIndex + 1}
+                  </strong>
+
+
+                  {/* CANDIDATE DROPDOWN */}
+
+                  <select
+                    value={
+                      candidate.userId
+                    }
+                    onChange={(e) =>
+                      selectCandidate(
+                        positionIndex,
+                        candidateIndex,
+                        e.target.value
+                      )
+                    }
+                  >
+
+                    <option value="">
+                      Select Candidate
+                    </option>
+
+
+                    {users.map(
+                      user => (
+
+                        <option
+                          key={user._id}
+                          value={user._id}
+                        >
+
+                          {user.name}
+                          {' — '}
+                          {user.email}
+
+                        </option>
+
+                      )
+                    )}
+
+                  </select>
+
+
+                  {/* SELECTED USER DETAILS */}
+
+                  {candidate.userId && (
+
+                    <div
+                      style={{
+                        marginTop: '10px',
+                        padding: '10px',
+                        background:
+                          '#f5f7fa',
+                        borderRadius:
+                          '6px'
+                      }}
+                    >
+
+                      <div>
+                        <strong>
+                          Name:
+                        </strong>
+                        {' '}
+                        {candidate.name}
+                      </div>
+
+                      <div>
+                        <strong>
+                          Email:
+                        </strong>
+                        {' '}
+                        {candidate.email}
+                      </div>
+
+                      <div>
+                        <strong>
+                          Register No:
+                        </strong>
+                        {' '}
+                        {candidate.registerNo ||
+                          'Not available'}
+                      </div>
+
+                    </div>
+
+                  )}
+
+
+                  <button
+                    onClick={() =>
+                      removeCandidate(
+                        positionIndex,
+                        candidateIndex
+                      )
+                    }
+                    style={{
+                      marginTop: '10px'
+                    }}
+                  >
+                    Remove Candidate
+                  </button>
+
+                </div>
+
+              )
+            )}
+
+
+            <button
+              onClick={() =>
+                addCandidate(
+                  positionIndex
+                )
+              }
+            >
+              + Add Candidate
+            </button>
+
+          </div>
+
+        )
+      )}
+
+
+      {/* =================================================
+          ADD POSITION
+      ================================================= */}
+
+      <button
+        onClick={addPosition}
+        style={{
+          marginBottom: '20px'
+        }}
+      >
+        + Add Position
+      </button>
+
+
+      <br />
+
+
+      {/* =================================================
+          CREATE
+      ================================================= */}
+
+      <button
+        className="primary"
+        onClick={createElection}
+        disabled={loading}
+      >
+
+        {loading
+          ? 'Creating Election...'
+          : '🗳️ Create Election'}
+
+      </button>
+
+    </div>
+
+  );
+
+}
+/* =========================================================
+   STUDENT FEEDBACK / ENQUIRY
+========================================================= */
+
+function EnquiryPage({ setMsg }) {
+
+  const [form, setForm] = useState({
+    type: 'Enquiry',
+    subject: '',
+    message: ''
+  });
+
+  const [items, setItems] = useState([]);
+
+  const [loading, setLoading] = useState(false);
+
+
+  const load = async () => {
+
+    try {
+
+      const data = await get('/enquiries/mine');
+
+      setItems(data);
+
+    } catch (error) {
+
+      setMsg(error.message);
+
+    }
+
+  };
+
+
+  useEffect(() => {
+
+    load();
+
+  }, []);
+
+
+  const submit = async () => {
+
+    if (
+      !form.subject.trim() ||
+      !form.message.trim()
+    ) {
+      setMsg('Please enter subject and message.');
+      return;
+    }
+
+    try {
+
+      setLoading(true);
+
+      await send('/enquiries', form);
+
+      setMsg(
+        'Your feedback / enquiry has been submitted successfully.'
+      );
+
+      setForm({
+        type: 'Enquiry',
+        subject: '',
+        message: ''
+      });
+
+      await load();
+
+    } catch (error) {
+
+      setMsg(error.message);
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+
+  return (
+    <>
+      <div className="title">
+        <div>
+          <h2>Feedback / Enquiry</h2>
+
+          <p>
+            Submit your feedback, enquiry, complaint or suggestion.
+          </p>
+        </div>
+      </div>
+
+
+      <div className="card">
+
+        <h3>Submit New</h3>
+
+        <div className="form">
+
+          <label>
+            Type
+
+            <select
+              value={form.type}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  type: e.target.value
+                })
+              }
+            >
+              <option value="Feedback">
+                Feedback
+              </option>
+
+              <option value="Enquiry">
+                Enquiry
+              </option>
+
+              <option value="Complaint">
+                Complaint
+              </option>
+
+              <option value="Suggestion">
+                Suggestion
+              </option>
+            </select>
+          </label>
+
+
+          <label>
+            Subject
+
+            <input
+              type="text"
+              value={form.subject}
+              placeholder="Enter subject"
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  subject: e.target.value
+                })
+              }
+            />
+          </label>
+
+
+          <label>
+            Message
+
+            <textarea
+              rows="6"
+              value={form.message}
+              placeholder="Write your feedback or enquiry..."
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  message: e.target.value
+                })
+              }
+            />
+          </label>
+
+
+          <button
+            className="primary"
+            onClick={submit}
+            disabled={loading}
+          >
+            {loading
+              ? 'Submitting...'
+              : 'Submit'}
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <h2>My Submissions</h2>
+
+      <div className="grid">
+
+        {items.length === 0 ? (
+
+          <div className="card">
+            <p>
+              No feedback or enquiries submitted yet.
+            </p>
+          </div>
+
+        ) : (
+
+          items.map((item) => (
+
+            <div
+              className="card"
+              key={item._id}
+            >
+
+              <span className="status">
+                {item.status}
+              </span>
+
+              <h3>
+                {item.subject}
+              </h3>
+
+              <p>
+                <b>Type:</b> {item.type}
+              </p>
+
+              <p>
+                {item.message}
+              </p>
+
+              {item.assignedTo && (
+                <p>
+                  <b>Assigned To:</b>{' '}
+                  {item.assignedTo.name}
+                </p>
+              )}
+
+              {item.coordinatorReply && (
+                <div className="card">
+                  <b>Coordinator Reply:</b>
+
+                  <p>
+                    {item.coordinatorReply}
+                  </p>
+                </div>
+              )}
+
+              <small>
+                {new Date(
+                  item.createdAt
+                ).toLocaleString()}
+              </small>
+
+            </div>
+
+          ))
+
+        )}
+
+      </div>
+    </>
+  );
+}
+
+/* =========================================================
+   STAFF FEEDBACK / ENQUIRY
+========================================================= */
+
+function StaffEnquiryPage({ setMsg }) {
+
+  const [items, setItems] = useState([]);
+  const [coordinators, setCoordinators] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    try {
+      const [enquiries, coordinatorList] = await Promise.all([
+        get('/enquiries'),
+        get('/enquiries/coordinators')
+      ]);
+
+      setItems(enquiries);
+      setCoordinators(coordinatorList);
+
+    } catch (error) {
+      setMsg(error.message);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const assignEnquiry = async (id, coordinatorId) => {
+
+    if (!coordinatorId) {
+      setMsg('Please select a coordinator.');
+      return;
+    }
+
+    try {
+
+      setLoading(true);
+
+      await send(
+        `/enquiries/${id}/assign`,
+        { coordinatorId },
+        'PATCH'
+      );
+
+      setMsg('Enquiry assigned successfully.');
+
+      await load();
+
+    } catch (error) {
+      setMsg(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="title">
+        <div>
+          <h2>Feedback / Enquiries</h2>
+
+          <p>
+            Review student feedback, enquiries, complaints and suggestions.
+          </p>
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+
+        <div className="card">
+          <h3>No Enquiries</h3>
+          <p>
+            No feedback or enquiries have been submitted by students yet.
+          </p>
+        </div>
+
+      ) : (
+
+        <div className="grid">
+
+          {items.map((item) => (
+
+            <div className="card" key={item._id}>
+
+              <span className="status">
+                {item.status}
+              </span>
+
+              <h3>{item.subject}</h3>
+
+              <p>
+                <b>Type:</b> {item.type}
+              </p>
+
+              <p>
+                <b>Student:</b>{' '}
+                {item.userId?.name || 'Unknown'}
+              </p>
+
+              <p>
+                <b>Email:</b>{' '}
+                {item.userId?.email || 'N/A'}
+              </p>
+
+              <p>
+                <b>Register No:</b>{' '}
+                {item.userId?.registerNo || 'N/A'}
+              </p>
+
+              <p>
+                <b>Message:</b>
+              </p>
+
+              <p>
+                {item.message}
+              </p>
+
+              {item.assignedTo && (
+                <p>
+                  <b>Assigned To:</b>{' '}
+                  {item.assignedTo.name}
+                </p>
+              )}
+
+              {item.coordinatorReply && (
+                <div className="card">
+
+                  <b>Coordinator Reply:</b>
+
+                  <p>
+                    {item.coordinatorReply}
+                  </p>
+
+                </div>
+              )}
+
+              {item.status !== 'Resolved' && (
+
+                <div className="form">
+
+                  <label>
+                    Assign to Coordinator
+
+                    <select
+                      defaultValue={
+                        item.assignedTo?._id || ''
+                      }
+                      id={`coordinator-${item._id}`}
+                    >
+
+                      <option value="">
+                        Select Coordinator
+                      </option>
+
+                      {coordinators.map((coordinator) => (
+
+                        <option
+                          key={coordinator._id}
+                          value={coordinator._id}
+                        >
+                          {coordinator.name}
+                        </option>
+
+                      ))}
+
+                    </select>
+
+                  </label>
+
+                  <button
+                    className="primary"
+                    disabled={loading}
+                    onClick={() => {
+
+                      const select =
+                        document.getElementById(
+                          `coordinator-${item._id}`
+                        );
+
+                      assignEnquiry(
+                        item._id,
+                        select.value
+                      );
+
+                    }}
+                  >
+                    {loading
+                      ? 'Assigning...'
+                      : 'Assign to Coordinator'}
+                  </button>
+
+                </div>
+
+              )}
+
+              <small>
+                {new Date(
+                  item.createdAt
+                ).toLocaleString()}
+              </small>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      )}
+
+    </>
+  );
+}
+
+/* =========================================================
+   COORDINATOR ASSIGNED ENQUIRIES
+========================================================= */
+
+function CoordinatorEnquiryPage({ setMsg }) {
+
+  const [items, setItems] = useState([]);
+  const [replies, setReplies] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    try {
+      const data = await get('/enquiries/assigned');
+      setItems(data);
+    } catch (error) {
+      setMsg(error.message);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const updateReply = (id, value) => {
+    setReplies(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  const resolveEnquiry = async (id) => {
+
+    const reply = replies[id]?.trim();
+
+    if (!reply) {
+      setMsg('Please enter a reply.');
+      return;
+    }
+
+    try {
+
+      setLoading(true);
+
+      await send(
+        `/enquiries/${id}/resolve`,
+        { reply },
+        'PATCH'
+      );
+
+      setMsg('Enquiry resolved and reply sent.');
+
+      await load();
+
+    } catch (error) {
+      setMsg(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="title">
+        <div>
+          <h2>💬 Assigned Enquiries</h2>
+
+          <p>
+            View and respond to enquiries assigned to you.
+          </p>
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+
+        <div className="card">
+          <h3>No Assigned Enquiries</h3>
+
+          <p>
+            There are no enquiries assigned to you.
+          </p>
+        </div>
+
+      ) : (
+
+        <div className="grid">
+
+          {items.map((item) => (
+
+            <div
+              className="card"
+              key={item._id}
+            >
+
+              <span className="status">
+                {item.status}
+              </span>
+
+              <h3>
+                {item.subject}
+              </h3>
+
+              <p>
+                <b>Type:</b> {item.type}
+              </p>
+
+              <p>
+                <b>Student:</b>{' '}
+                {item.userId?.name || 'Unknown'}
+              </p>
+
+              <p>
+                <b>Register No:</b>{' '}
+                {item.userId?.registerNo || 'N/A'}
+              </p>
+
+              <p>
+                <b>Email:</b>{' '}
+                {item.userId?.email || 'N/A'}
+              </p>
+
+              <p>
+                <b>Message:</b>
+              </p>
+
+              <p>
+                {item.message}
+              </p>
+
+              {item.status === 'Resolved' ? (
+
+                <div className="card">
+
+                  <b>Your Reply:</b>
+
+                  <p>
+                    {item.coordinatorReply}
+                  </p>
+
+                  <small>
+                    This enquiry has already been resolved.
+                  </small>
+
+                </div>
+
+              ) : (
+
+                <div className="form">
+
+                  <label>
+                    Reply to Student
+
+                    <textarea
+                      rows="5"
+                      placeholder="Enter your reply..."
+                      value={replies[item._id] || ''}
+                      onChange={(e) =>
+                        updateReply(
+                          item._id,
+                          e.target.value
+                        )
+                      }
+                    />
+
+                  </label>
+
+                  <button
+                    className="primary"
+                    disabled={loading}
+                    onClick={() =>
+                      resolveEnquiry(item._id)
+                    }
+                  >
+                    {loading
+                      ? 'Sending...'
+                      : 'Resolve & Reply'}
+                  </button>
+
+                </div>
+
+              )}
+
+              <small>
+                {new Date(
+                  item.createdAt
+                ).toLocaleString()}
+              </small>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      )}
+
+    </>
+  );
+}
 /* =========================================================
    START REACT
 ========================================================= */

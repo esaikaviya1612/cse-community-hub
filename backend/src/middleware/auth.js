@@ -1,4 +1,9 @@
 import jwt from 'jsonwebtoken';import User from '../models/User.js';
 export async function auth(req,res,next){try{const h=req.headers.authorization||'';const t=h.startsWith('Bearer ')?h.slice(7):null;if(!t)return res.status(401).json({message:'Authentication required'});const p=jwt.verify(t,process.env.JWT_SECRET);const u=await User.findById(p.userId).select('-passwordHash');if(!u||!u.active)return res.status(401).json({message:'Invalid user'});req.user=u;next()}catch(e){res.status(401).json({message:'Invalid or expired token'})}}
 export const allow=(...roles)=>(req,res,next)=>roles.includes(req.user.role)?next():res.status(403).json({message:'You are not authorized to perform this action'});
-export const assigned=(u,id)=>u.role==='staff'||u.communityIds.some(x=>x.toString()===id.toString());
+export const assigned = (u, id) =>
+  u.role === 'staff' ||
+  (Array.isArray(u.communityIds) &&
+    u.communityIds.some(
+      x => x.toString() === id.toString()
+    ));

@@ -24,17 +24,22 @@ const voteSchema = new mongoose.Schema(
       required: true
     }
   },
-  { timestamps: true }
+  {
+    timestamps: true
+  }
 );
 
-// ONE STUDENT = ONE VOTE FOR ONE POSITION
+// One student can vote only once
+// for one position in one election.
 voteSchema.index(
   {
     electionId: 1,
     position: 1,
     studentId: 1
   },
-  { unique: true }
+  {
+    unique: true
+  }
 );
 
 export default mongoose.model('Vote', voteSchema);

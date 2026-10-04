@@ -45,6 +45,25 @@
   font-weight: 700;
   flex-shrink: 0;
 }
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.sidebar-menu {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar-logout {
+  flex-shrink: 0;
+}
+aside {
+  height: 100vh;
+  overflow-y: auto;
+}
 /* =====================================================
    COMMUNITY MANAGEMENT
 ===================================================== */
@@ -235,4 +254,106 @@
 .notification-item small {
   display: block;
   margin-top: 6px;
+}
+/* =====================================================
+   EVENT POSTERS
+===================================================== */
+
+.poster-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(260px, 1fr));
+
+  gap: 20px;
+
+  margin-bottom: 30px;
+}
+
+
+.event-poster-card {
+  background: white;
+
+  border-radius: 14px;
+
+  overflow: hidden;
+
+  border: 1px solid #e2e8f0;
+
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.06);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.event-poster-card:hover {
+  transform: translateY(-4px);
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+
+.event-poster-image {
+  width: 100%;
+
+  height: 280px;
+
+  object-fit: cover;
+
+  display: block;
+}
+
+
+.poster-placeholder {
+  width: 100%;
+
+  height: 280px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+
+  align-items: center;
+
+  background: #f1f5f9;
+
+  color: #64748b;
+}
+
+
+.poster-placeholder span {
+  font-size: 45px;
+}
+
+
+.event-poster-info {
+  padding: 16px;
+}
+
+
+.event-poster-info h3 {
+  margin:
+    0 0 10px;
+
+  color: #172554;
+}
+
+
+.event-poster-info p {
+  margin:
+    5px 0;
+
+  color: #475569;
+}
+
+
+.event-poster-info button {
+  margin-top: 10px;
 }

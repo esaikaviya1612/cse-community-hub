@@ -1,42 +1,60 @@
 import 'dotenv/config';
-import { connectDB } from './src/config/db.js';
-import User from './src/models/User.js';
-import Community from './src/models/Community.js';
+import mongoose from 'mongoose';
+
+import { connectDB } from './config/db.js';
+import User from './models/User.js';
+import Community from './models/Community.js';
 
 await connectDB();
 
-const coordinator = await User.findOne({
-  email: 'coordinator@csehub.local'
-});
+try {
 
-if (!coordinator) {
-  console.log('Coordinator not found');
-  process.exit(1);
-}
+  const coordinator = await User.findOne({
+    role: 'coordinator'
+  });
 
-const communities = await Community.find({
-  name: { $in: ['Tech Society', 'IEI'] }
-});
-
-if (communities.length !== 2) {
-  console.log('Could not find both communities');
-  process.exit(1);
-}
-
-coordinator.communityIds = communities.map(c => c._id);
-await coordinator.save();
-
-for (const community of communities) {
-  if (!community.coordinatorIds.some(
-    id => id.toString() === coordinator._id.toString()
-  )) {
-    community.coordinatorIds.push(coordinator._id);
-    await community.save();
+  if (!coordinator) {
+    throw new Error('Coordinator not found');
   }
+
+  const communities = await Community.find({
+    $or: [
+      { code: 'TECH' },
+      { code: 'IEI' },
+      { name: 'Tech Society' },
+      { name: 'IEI' }
+    ]
+  });
+
+  if (communities.length === 0) {
+    throw new Error('Communities not found');
+  }
+
+  coordinator.communityIds =
+    communities.map(c => c._id);
+
+  await coordinator.save();
+
+  console.log(
+    'Coordinator assigned to BOTH communities'
+  );
+
+  console.log(
+    'Coordinator:',
+    coordinator.name
+  );
+
+  console.log(
+    'Communities:',
+    communities.map(c => c.name).join(', ')
+  );
+
+} catch (error) {
+
+  console.error(error);
+
+} finally {
+
+  await mongoose.connection.close();
+
 }
-
-console.log('Coordinator assigned to BOTH communities');
-console.log('Coordinator:', coordinator.name);
-console.log('Communities:', communities.map(c => c.name).join(', '));
-
-process.exit(0);

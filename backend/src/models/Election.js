@@ -1,19 +1,68 @@
 import mongoose from 'mongoose';
 
-const candidateSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  registerNo: { type: String, required: true },
-  photo: { type: String, default: '' }
-});
+const candidateSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
 
-const positionSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  candidates: [candidateSchema]
-});
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    email: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true
+    },
+
+    registerNo: {
+      type: String,
+      default: ''
+    },
+
+    photo: {
+      type: String,
+      default: ''
+    }
+  },
+  { _id: true }
+);
+
+const positionSchema = new mongoose.Schema(
+  {
+    roleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Role',
+      required: true
+    },
+
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    candidates: {
+      type: [candidateSchema],
+      default: []
+    }
+  },
+  { _id: true }
+);
 
 const electionSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },
+    title: {
+      type: String,
+      required: true,
+      trim: true
+    },
 
     communityId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -21,16 +70,27 @@ const electionSchema = new mongoose.Schema(
       required: true
     },
 
-    positions: [positionSchema],
+    positions: {
+      type: [positionSchema],
+      required: true,
+      default: []
+    },
 
     status: {
       type: String,
       enum: ['draft', 'active', 'closed'],
-      default: 'draft'
+      default: 'active'
     },
 
-    startDate: Date,
-    endDate: Date,
+    startDate: {
+      type: Date,
+      default: Date.now
+    },
+
+    endDate: {
+      type: Date,
+      default: null
+    },
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -38,7 +98,9 @@ const electionSchema = new mongoose.Schema(
       required: true
     }
   },
-  { timestamps: true }
+  {
+    timestamps: true
+  }
 );
 
 export default mongoose.model('Election', electionSchema);

@@ -36,17 +36,17 @@ const userSchema = new mongoose.Schema(
 
     department: {
       type: String,
-      required: true
+      default: ''
     },
 
     year: {
       type: String,
-      required: true
+      default: ''
     },
 
     gender: {
       type: String,
-      required: true
+      default: ''
     },
 
     className: {
