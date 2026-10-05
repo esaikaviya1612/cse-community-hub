@@ -1,6 +1,4 @@
-const B =
-  import.meta.env.VITE_API_URL ||
-  'http://localhost:5000/api';
+const B = '/api';
 
 export async function api(p, o = {}) {
   const t = localStorage.getItem('token');
