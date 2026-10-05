@@ -30,3 +30,4 @@ app.use('/api/enquiries', enquiries);
 app.use('/api',exportsRoute);connectDB().then(()=>app.listen(process.env.PORT||5000,()=>console.log(`API running on http://localhost:${process.env.PORT||5000}`))).catch(e=>{console.error(e);process.exit(1)});
 app.use('/api/notifications', notifications);
 
+export default app;
