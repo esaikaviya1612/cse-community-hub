@@ -8,11 +8,7 @@ import Notification from '../models/Notification.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-const uploadDir = path.join(
-  process.cwd(),
-  'uploads',
-  'event-posters'
-);
+const uploadDir = path.join('/tmp', 'uploads', 'event-posters');
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, {
