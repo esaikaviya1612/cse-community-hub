@@ -22,11 +22,6 @@ if (!fs.existsSync(uploadDir)) {
     recursive: true
   });
 }
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, {
-    recursive: true
-  });
-}
 
 
 /* =========================================================
