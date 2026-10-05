@@ -15,11 +15,13 @@ const router = express.Router();
    PROFILE UPLOAD DIRECTORY
 ========================================================= */
 
-const uploadDir = path.join(
-  process.cwd(),
-  'uploads'
-);
+const uploadDir = path.join('/tmp', 'uploads');
 
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, {
+    recursive: true
+  });
+}
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, {
     recursive: true

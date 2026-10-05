@@ -15,13 +15,10 @@ import elections from './routes/elections.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app=express();
-const uploadDir = path.join(__dirname, '../uploads');
 
 app.use(
   '/uploads',
-  express.static(
-    path.join(process.cwd(), 'uploads')
-  )
+  express.static('/tmp/uploads')
 );
 app.use(cors({origin:true}));app.use(express.json());
 app.get('/',(q,s)=>s.json({message:'CSE Community Hub API is running'}));
